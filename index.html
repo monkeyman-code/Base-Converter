@@ -5,70 +5,16 @@
   <title>Base Converter</title>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-    
-    body { 
-      background-color: #f0f2f5; 
-      display: flex; 
-      justify-content: center; 
-      align-items: center; 
-      min-height: 100vh; 
-      margin: 0; 
-      padding: 15px;
-    }
-
-    .card { 
-      background: white; 
-      width: 100%; 
-      max-width: 400px; 
-      padding: 25px; 
-      border-radius: 15px; 
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
-    }
-
+    body { background-color: #f0f2f5; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; margin: 0; padding: 15px; }
+    .card { background: white; width: 100%; max-width: 450px; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); margin-top: 20px; }
     h2 { text-align: center; color: #333; margin-bottom: 25px; }
     h3 { font-size: 1rem; color: #666; margin-bottom: 10px; }
-
-    .section { margin-bottom: 30px; }
-
-    input { 
-      width: 100%; 
-      padding: 15px; 
-      font-size: 1.1rem; 
-      border: 2px solid #ddd; 
-      border-radius: 10px; 
-      margin-bottom: 10px;
-      outline: none;
-      transition: border-color 0.3s;
-    }
-
+    .section { margin-bottom: 20px; }
+    input { width: 100%; padding: 15px; font-size: 1.1rem; border: 2px solid #ddd; border-radius: 10px; margin-bottom: 10px; outline: none; }
     input:focus { border-color: #007bff; }
-
-    .result-box { 
-      background: #e9ecef; 
-      padding: 15px; 
-      border-radius: 10px; 
-      font-weight: bold; 
-      font-size: 1.1rem; 
-      color: #007bff; 
-      word-break: break-all; 
-      min-height: 55px;
-      display: flex;
-      align-items: center;
-      font-family: monospace;
-    }
-
-    .label { font-size: 0.8rem; color: #999; margin-top: 5px; }
-    
-    .reset-btn {
-      width: 100%;
-      padding: 10px;
-      background: #6c757d;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-    }
+    .result-box { background: #e9ecef; padding: 15px; border-radius: 10px; font-weight: bold; font-size: 1.1rem; color: #007bff; word-break: break-all; min-height: 55px; display: flex; align-items: center; font-family: monospace; }
+    .solution-box { margin-top: 10px; padding: 15px; background: #fffdf0; border-left: 4px solid #f1c40f; font-size: 0.85rem; color: #444; white-space: pre-line; display: none; border-radius: 5px; }
+    .reset-btn { width: 100%; padding: 12px; background: #6c757d; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -78,61 +24,126 @@
 
   <div class="section">
     <h3>Binary to Decimal</h3>
-    <input type="text" id="binIn" placeholder="e.g. 101.11" oninput="binToDec()">
+    <input type="text" id="binIn" placeholder="Enter binary" oninput="validateBinary(this); binToDec()">
     <div class="result-box" id="decOut">0</div>
-    <div class="label">Resulting Decimal</div>
+    <div class="solution-box" id="binToDecSol"></div>
   </div>
 
   <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
 
   <div class="section">
     <h3>Decimal to Binary</h3>
-    <input type="number" id="decIn" step="any" placeholder="e.g. 5.75" oninput="decToBin()">
+    <input type="number" id="decIn" step="any" placeholder="Enter decimal" oninput="decToBin()">
     <div class="result-box" id="binOut">0</div>
-    <div class="label">Resulting Binary</div>
+    <div class="solution-box" id="decToBinSol"></div>
   </div>
 
   <button class="reset-btn" onclick="resetAll()">Reset Fields</button>
 </div>
 
 <script>
+  // Strict validation for Binary input
+  function validateBinary(el) {
+    let val = el.value;
+    // Remove everything that isn't 0, 1, or the first dot
+    let clean = val.replace(/[^01.]/g, '');
+    
+    // Prevent multiple dots
+    const parts = clean.split('.');
+    if (parts.length > 2) {
+      clean = parts[0] + '.' + parts.slice(1).join('');
+    }
+    
+    if (val !== clean) {
+      el.value = clean;
+    }
+  }
+
   function binToDec() {
     let input = document.getElementById("binIn").value;
-    // Allow only 0, 1, and one dot
-    input = input.replace(/[^01.]/g, '');
-    const dots = (input.match(/\./g) || []).length;
-    if (dots > 1) input = input.substring(0, input.lastIndexOf('.'));
-    document.getElementById("binIn").value = input;
-
-    if (!input) {
+    let solBox = document.getElementById("binToDecSol");
+    if (!input || input === ".") { 
       document.getElementById("decOut").innerText = "0";
-      return;
+      solBox.style.display = "none"; 
+      return; 
     }
 
-    let parts = input.split('.');
-    let whole = parseInt(parts[0], 2) || 0;
-    let fraction = 0;
+    let [wholePart, fracPart] = input.split('.');
+    let total = 0;
+    let steps = "Step-by-step:\n";
 
-    if (parts[1]) {
-      for (let i = 0; i < parts[1].length; i++) {
-        if (parts[1][i] === '1') {
-          fraction += Math.pow(2, -(i + 1));
-        }
+    // Whole side
+    if (wholePart) {
+      for (let i = 0; i < wholePart.length; i++) {
+        let power = wholePart.length - 1 - i;
+        let bit = wholePart[i];
+        let val = bit * Math.pow(2, power);
+        total += val;
+        steps += `${bit} × 2^${power} = ${val}\n`;
       }
     }
-    document.getElementById("decOut").innerText = whole + fraction;
+
+    // Fraction side
+    if (fracPart) {
+      for (let i = 0; i < fracPart.length; i++) {
+        let power = -(i + 1);
+        let bit = fracPart[i];
+        let val = bit * Math.pow(2, power);
+        total += val;
+        steps += `${bit} × 2^${power} = ${val}\n`;
+      }
+    }
+
+    document.getElementById("decOut").innerText = total;
+    solBox.innerText = steps + `\nTotal: ${total}`;
+    solBox.style.display = "block";
   }
 
   function decToBin() {
     let input = document.getElementById("decIn").value;
-    if (!input) {
+    let solBox = document.getElementById("decToBinSol");
+    if (!input) { 
       document.getElementById("binOut").innerText = "0";
-      return;
+      solBox.style.display = "none"; 
+      return; 
     }
-    
-    // JS built-in handles floating point to binary string conversion!
+
     let num = parseFloat(input);
-    document.getElementById("binOut").innerText = num.toString(2);
+    let isNegative = num < 0;
+    let absNum = Math.abs(num);
+    
+    let whole = Math.floor(absNum);
+    let frac = absNum - whole;
+    let steps = isNegative ? "Processing absolute value (Negative sign added at end):\n\n" : "";
+    steps += "Whole Number (Division by 2):\n";
+    
+    let tempWhole = whole;
+    let wholeBin = "";
+    if (tempWhole === 0) wholeBin = "0";
+    while (tempWhole > 0) {
+      steps += `${tempWhole} ÷ 2 = ${Math.floor(tempWhole/2)} Rem: ${tempWhole % 2}\n`;
+      wholeBin = (tempWhole % 2) + wholeBin;
+      tempWhole = Math.floor(tempWhole / 2);
+    }
+
+    let fracBin = "";
+    if (frac > 0) {
+      steps += "\nFraction (Multiplication by 2):\n";
+      let tempFrac = frac;
+      let limit = 0;
+      while (tempFrac > 0 && limit < 10) {
+        let prod = tempFrac * 2;
+        steps += `${tempFrac.toFixed(4)} × 2 = ${prod.toFixed(4)} (Digit: ${Math.floor(prod)})\n`;
+        fracBin += Math.floor(prod);
+        tempFrac = prod - Math.floor(prod);
+        limit++;
+      }
+    }
+
+    let finalBin = (isNegative ? "-" : "") + (fracBin ? wholeBin + "." + fracBin : wholeBin);
+    document.getElementById("binOut").innerText = finalBin;
+    solBox.innerText = steps + `\nResult: ${finalBin}`;
+    solBox.style.display = "block";
   }
 
   function resetAll() {
@@ -140,6 +151,8 @@
     document.getElementById("decIn").value = "";
     document.getElementById("binOut").innerText = "0";
     document.getElementById("decOut").innerText = "0";
+    document.getElementById("binToDecSol").style.display = "none";
+    document.getElementById("decToBinSol").style.display = "none";
   }
 </script>
 
