@@ -2,19 +2,36 @@
 <html lang="en">
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Base Converter</title>
+  <title>Omni-Base Converter</title>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
     body { background-color: #f0f2f5; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; margin: 0; padding: 15px; }
-    .card { background: white; width: 100%; max-width: 450px; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); margin-top: 20px; }
+    .card { background: white; width: 100%; max-width: 500px; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); margin-top: 20px; }
     h2 { text-align: center; color: #333; margin-bottom: 25px; }
-    h3 { font-size: 1rem; color: #666; margin-bottom: 10px; }
-    .section { margin-bottom: 20px; }
-    input { width: 100%; padding: 15px; font-size: 1.1rem; border: 2px solid #ddd; border-radius: 10px; margin-bottom: 10px; outline: none; }
-    input:focus { border-color: #007bff; }
-    .result-box { background: #e9ecef; padding: 15px; border-radius: 10px; font-weight: bold; font-size: 1.1rem; color: #007bff; word-break: break-all; min-height: 55px; display: flex; align-items: center; font-family: monospace; }
-    .solution-box { margin-top: 10px; padding: 15px; background: #fffdf0; border-left: 4px solid #f1c40f; font-size: 0.85rem; color: #444; white-space: pre-line; display: none; border-radius: 5px; }
+    h3 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: #666; margin-bottom: 8px; margin-top: 0; }
+    .section { margin-bottom: 20px; position: relative; }
+    
+    input { 
+      width: 100%; padding: 15px; font-size: 1.1rem; 
+      border: 2px solid #ddd; border-radius: 10px; outline: none; 
+      transition: all 0.2s;
+    }
+    input:focus { border-color: #007bff; box-shadow: 0 0 0 3px rgba(0,123,255,0.1); }
+    
+    /* specific border colors for bases */
+    .bin-in:focus { border-color: #2ecc71; } /* Green for Bin */
+    .oct-in:focus { border-color: #e67e22; } /* Orange for Oct */
+    .dec-in:focus { border-color: #3498db; } /* Blue for Dec */
+
+    .solution-box { 
+      margin-top: 8px; padding: 12px; 
+      background: #fffdf0; border-left: 4px solid #f1c40f; 
+      font-size: 0.85rem; color: #444; white-space: pre-line; 
+      display: none; border-radius: 4px; font-family: monospace;
+    }
+
     .reset-btn { width: 100%; padding: 12px; background: #6c757d; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+    .divider { height: 1px; background: #eee; margin: 25px 0; }
   </style>
 </head>
 <body>
@@ -23,136 +40,180 @@
   <h2>Base Converter</h2>
 
   <div class="section">
-    <h3>Binary to Decimal</h3>
-    <input type="text" id="binIn" placeholder="Enter binary" oninput="validateBinary(this); binToDec()">
-    <div class="result-box" id="decOut">0</div>
-    <div class="solution-box" id="binToDecSol"></div>
+    <h3>Binary (Base 2)</h3>
+    <input type="text" class="bin-in" id="binIn" placeholder="0s and 1s" oninput="fromBinary()">
+    <div class="solution-box" id="sol-bin"></div>
   </div>
-
-  <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
 
   <div class="section">
-    <h3>Decimal to Binary</h3>
-    <input type="number" id="decIn" step="any" placeholder="Enter decimal" oninput="decToBin()">
-    <div class="result-box" id="binOut">0</div>
-    <div class="solution-box" id="decToBinSol"></div>
+    <h3>Octal (Base 8)</h3>
+    <input type="text" class="oct-in" id="octIn" placeholder="0-7" oninput="fromOctal()">
+    <div class="solution-box" id="sol-oct"></div>
   </div>
 
-  <button class="reset-btn" onclick="resetAll()">Reset Fields</button>
+  <div class="section">
+    <h3>Decimal (Base 10)</h3>
+    <input type="number" class="dec-in" id="decIn" step="any" placeholder="0-9" oninput="fromDecimal()">
+    <div class="solution-box" id="sol-dec"></div>
+  </div>
+
+  <button class="reset-btn" onclick="resetAll()">Clear All</button>
 </div>
 
 <script>
-  // Strict validation for Binary input
-  function validateBinary(el) {
+  // --- CORE CONVERSION FUNCTIONS ---
+
+  function fromBinary() {
+    let el = document.getElementById("binIn");
+    // Validate: Remove anything that isn't 0, 1, or dot
+    cleanInput(el, /[^01.]/g);
     let val = el.value;
-    // Remove everything that isn't 0, 1, or the first dot
-    let clean = val.replace(/[^01.]/g, '');
     
-    // Prevent multiple dots
-    const parts = clean.split('.');
-    if (parts.length > 2) {
-      clean = parts[0] + '.' + parts.slice(1).join('');
-    }
+    if (!val || val === ".") { clearOthers('bin'); return; }
     
-    if (val !== clean) {
-      el.value = clean;
-    }
+    // 1. Convert Bin -> Dec
+    let decimal = baseToDecimal(val, 2);
+    
+    // 2. Update other fields
+    document.getElementById("decIn").value = decimal;
+    document.getElementById("octIn").value = decimalToOtherBase(decimal, 8);
+    
+    // 3. Show Steps (Bin -> Dec)
+    showToDecimalSteps(val, 2, "sol-bin");
+    hide("sol-oct"); hide("sol-dec");
   }
 
-  function binToDec() {
-    let input = document.getElementById("binIn").value;
-    let solBox = document.getElementById("binToDecSol");
-    if (!input || input === ".") { 
-      document.getElementById("decOut").innerText = "0";
-      solBox.style.display = "none"; 
-      return; 
-    }
+  function fromOctal() {
+    let el = document.getElementById("octIn");
+    // Validate: Remove anything that isn't 0-7 or dot
+    cleanInput(el, /[^0-7.]/g);
+    let val = el.value;
 
-    let [wholePart, fracPart] = input.split('.');
+    if (!val || val === ".") { clearOthers('oct'); return; }
+
+    // 1. Convert Oct -> Dec
+    let decimal = baseToDecimal(val, 8);
+
+    // 2. Update other fields
+    document.getElementById("decIn").value = decimal;
+    document.getElementById("binIn").value = decimalToOtherBase(decimal, 2);
+
+    // 3. Show Steps (Oct -> Dec)
+    showToDecimalSteps(val, 8, "sol-oct");
+    hide("sol-bin"); hide("sol-dec");
+  }
+
+  function fromDecimal() {
+    let val = document.getElementById("decIn").value;
+    if (!val) { clearOthers('dec'); return; }
+
+    let num = parseFloat(val);
+    
+    // Update others
+    document.getElementById("binIn").value = decimalToOtherBase(num, 2);
+    document.getElementById("octIn").value = decimalToOtherBase(num, 8);
+
+    // Show Steps (Dec -> Others)
+    let steps = "";
+    steps += `To Binary:\n${getDivisionSteps(num, 2)}\n`;
+    steps += `\nTo Octal:\n${getDivisionSteps(num, 8)}`;
+    
+    let box = document.getElementById("sol-dec");
+    box.innerText = steps;
+    box.style.display = "block";
+    hide("sol-bin"); hide("sol-oct");
+  }
+
+  // --- HELPERS ---
+
+  function cleanInput(el, regex) {
+    let val = el.value;
+    let clean = val.replace(regex, '');
+    // Ensure only one dot
+    let parts = clean.split('.');
+    if (parts.length > 2) clean = parts[0] + '.' + parts.slice(1).join('');
+    if (val !== clean) el.value = clean;
+  }
+
+  // Generic function to convert ANY base (2 or 8) to Decimal
+  function baseToDecimal(str, base) {
+    let [whole, frac] = str.split('.');
     let total = 0;
-    let steps = "Step-by-step:\n";
-
-    // Whole side
-    if (wholePart) {
-      for (let i = 0; i < wholePart.length; i++) {
-        let power = wholePart.length - 1 - i;
-        let bit = wholePart[i];
-        let val = bit * Math.pow(2, power);
-        total += val;
-        steps += `${bit} × 2^${power} = ${val}\n`;
+    
+    // Whole part
+    if (whole) total += parseInt(whole, base);
+    
+    // Fraction part
+    if (frac) {
+      for (let i = 0; i < frac.length; i++) {
+        let digit = parseInt(frac[i], 10);
+        total += digit * Math.pow(base, -(i + 1));
       }
     }
-
-    // Fraction side
-    if (fracPart) {
-      for (let i = 0; i < fracPart.length; i++) {
-        let power = -(i + 1);
-        let bit = fracPart[i];
-        let val = bit * Math.pow(2, power);
-        total += val;
-        steps += `${bit} × 2^${power} = ${val}\n`;
-      }
-    }
-
-    document.getElementById("decOut").innerText = total;
-    solBox.innerText = steps + `\nTotal: ${total}`;
-    solBox.style.display = "block";
+    return total;
   }
 
-  function decToBin() {
-    let input = document.getElementById("decIn").value;
-    let solBox = document.getElementById("decToBinSol");
-    if (!input) { 
-      document.getElementById("binOut").innerText = "0";
-      solBox.style.display = "none"; 
-      return; 
-    }
+  // Generic function to convert Decimal to ANY base
+  function decimalToOtherBase(num, base) {
+    // JS built-in toString handles base 2-36 nicely, even with fractions!
+    return Number(num).toString(base);
+  }
 
-    let num = parseFloat(input);
-    let isNegative = num < 0;
-    let absNum = Math.abs(num);
+  // Generate the Step-by-Step text for converting TO Decimal
+  function showToDecimalSteps(str, base, boxId) {
+    let [whole, frac] = str.split('.');
+    let steps = `Converting Base-${base} to Decimal:\n`;
     
-    let whole = Math.floor(absNum);
-    let frac = absNum - whole;
-    let steps = isNegative ? "Processing absolute value (Negative sign added at end):\n\n" : "";
-    steps += "Whole Number (Division by 2):\n";
-    
-    let tempWhole = whole;
-    let wholeBin = "";
-    if (tempWhole === 0) wholeBin = "0";
-    while (tempWhole > 0) {
-      steps += `${tempWhole} ÷ 2 = ${Math.floor(tempWhole/2)} Rem: ${tempWhole % 2}\n`;
-      wholeBin = (tempWhole % 2) + wholeBin;
-      tempWhole = Math.floor(tempWhole / 2);
-    }
-
-    let fracBin = "";
-    if (frac > 0) {
-      steps += "\nFraction (Multiplication by 2):\n";
-      let tempFrac = frac;
-      let limit = 0;
-      while (tempFrac > 0 && limit < 10) {
-        let prod = tempFrac * 2;
-        steps += `${tempFrac.toFixed(4)} × 2 = ${prod.toFixed(4)} (Digit: ${Math.floor(prod)})\n`;
-        fracBin += Math.floor(prod);
-        tempFrac = prod - Math.floor(prod);
-        limit++;
+    if (whole) {
+      for (let i = 0; i < whole.length; i++) {
+        let p = whole.length - 1 - i;
+        let d = whole[i];
+        steps += `${d} × ${base}^${p} = ${d * Math.pow(base, p)}\n`;
       }
     }
+    if (frac) {
+      for (let i = 0; i < frac.length; i++) {
+        let p = -(i + 1);
+        let d = frac[i];
+        steps += `${d} × ${base}^${p} = ${(d * Math.pow(base, p)).toFixed(4)}\n`;
+      }
+    }
+    
+    let box = document.getElementById(boxId);
+    box.innerText = steps;
+    box.style.display = "block";
+  }
 
-    let finalBin = (isNegative ? "-" : "") + (fracBin ? wholeBin + "." + fracBin : wholeBin);
-    document.getElementById("binOut").innerText = finalBin;
-    solBox.innerText = steps + `\nResult: ${finalBin}`;
-    solBox.style.display = "block";
+  // Generate division steps (for Dec -> Base X)
+  function getDivisionSteps(num, base) {
+    let whole = Math.floor(num);
+    let steps = "";
+    
+    if (whole === 0) return "0";
+    
+    let temp = whole;
+    while (temp > 0) {
+      let rem = temp % base;
+      let next = Math.floor(temp / base);
+      steps += `${temp} ÷ ${base} = ${next} (Rem: ${rem})\n`;
+      temp = next;
+    }
+    return steps;
+  }
+
+  function hide(id) { document.getElementById(id).style.display = "none"; }
+  
+  function clearOthers(source) {
+    if (source !== 'bin') { document.getElementById("binIn").value = ""; hide("sol-bin"); }
+    if (source !== 'oct') { document.getElementById("octIn").value = ""; hide("sol-oct"); }
+    if (source !== 'dec') { document.getElementById("decIn").value = ""; hide("sol-dec"); }
   }
 
   function resetAll() {
     document.getElementById("binIn").value = "";
+    document.getElementById("octIn").value = "";
     document.getElementById("decIn").value = "";
-    document.getElementById("binOut").innerText = "0";
-    document.getElementById("decOut").innerText = "0";
-    document.getElementById("binToDecSol").style.display = "none";
-    document.getElementById("decToBinSol").style.display = "none";
+    hide("sol-bin"); hide("sol-oct"); hide("sol-dec");
   }
 </script>
 
