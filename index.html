@@ -48,25 +48,37 @@
       padding: 15px; 
       border-radius: 10px; 
       font-weight: bold; 
-      font-size: 1.2rem; 
+      font-size: 1.1rem; 
       color: #007bff; 
-      word-break: break-all; /* Prevents long binary strings from breaking the layout */
+      word-break: break-all; 
       min-height: 55px;
       display: flex;
       align-items: center;
+      font-family: monospace;
     }
 
     .label { font-size: 0.8rem; color: #999; margin-top: 5px; }
+    
+    .reset-btn {
+      width: 100%;
+      padding: 10px;
+      background: #6c757d;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
 
 <div class="card">
-  <h2>NumConverter</h2>
+  <h2>Base Converter</h2>
 
   <div class="section">
     <h3>Binary to Decimal</h3>
-    <input type="text" id="binIn" placeholder="Enter 1s and 0s" oninput="convertBin()">
+    <input type="text" id="binIn" placeholder="e.g. 101.11" oninput="binToDec()">
     <div class="result-box" id="decOut">0</div>
     <div class="label">Resulting Decimal</div>
   </div>
@@ -75,31 +87,59 @@
 
   <div class="section">
     <h3>Decimal to Binary</h3>
-    <input type="number" id="decIn" placeholder="Enter a number" oninput="convertDec()">
+    <input type="number" id="decIn" step="any" placeholder="e.g. 5.75" oninput="decToBin()">
     <div class="result-box" id="binOut">0</div>
     <div class="label">Resulting Binary</div>
   </div>
+
+  <button class="reset-btn" onclick="resetAll()">Reset Fields</button>
 </div>
 
 <script>
-  function convertBin() {
-    const val = document.getElementById("binIn").value;
-    // Remove any non-0 or 1 characters automatically
-    const cleanVal = val.replace(/[^01]/g, '');
-    document.getElementById("binIn").value = cleanVal;
-    
-    const result = parseInt(cleanVal, 2);
-    document.getElementById("decOut").innerText = isNaN(result) ? "0" : result;
+  function binToDec() {
+    let input = document.getElementById("binIn").value;
+    // Allow only 0, 1, and one dot
+    input = input.replace(/[^01.]/g, '');
+    const dots = (input.match(/\./g) || []).length;
+    if (dots > 1) input = input.substring(0, input.lastIndexOf('.'));
+    document.getElementById("binIn").value = input;
+
+    if (!input) {
+      document.getElementById("decOut").innerText = "0";
+      return;
+    }
+
+    let parts = input.split('.');
+    let whole = parseInt(parts[0], 2) || 0;
+    let fraction = 0;
+
+    if (parts[1]) {
+      for (let i = 0; i < parts[1].length; i++) {
+        if (parts[1][i] === '1') {
+          fraction += Math.pow(2, -(i + 1));
+        }
+      }
+    }
+    document.getElementById("decOut").innerText = whole + fraction;
   }
 
-  function convertDec() {
-    const val = document.getElementById("decIn").value;
-    if (val === "") {
+  function decToBin() {
+    let input = document.getElementById("decIn").value;
+    if (!input) {
       document.getElementById("binOut").innerText = "0";
       return;
     }
-    const result = Number(val).toString(2);
-    document.getElementById("binOut").innerText = result;
+    
+    // JS built-in handles floating point to binary string conversion!
+    let num = parseFloat(input);
+    document.getElementById("binOut").innerText = num.toString(2);
+  }
+
+  function resetAll() {
+    document.getElementById("binIn").value = "";
+    document.getElementById("decIn").value = "";
+    document.getElementById("binOut").innerText = "0";
+    document.getElementById("decOut").innerText = "0";
   }
 </script>
 
